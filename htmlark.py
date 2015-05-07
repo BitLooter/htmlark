@@ -20,9 +20,11 @@ def main():
     for image in imgtags:
         print("Image found: " + image['src'])
         url = urljoin(pageurl, image['src'])
-        imagecontent = requests.get(url).content
-        imageencoded = base64.b64encode(imagecontent).decode()
-        image['src'] = "data:image/jpeg;base64," + imageencoded
+        imagerequest = requests.get(url)
+        imageencoded = base64.b64encode(imagerequest.content).decode()
+        #TODO: If no Content-Type header (or local file) use mimetypes module
+        imagetype = imagerequest.headers['Content-Type']
+        image['src'] = "data:{};base64,{}".format(imagetype, imageencoded)
 
     # Conversion complete, write output and cleanup
     outfile = open('out.html', 'w')
