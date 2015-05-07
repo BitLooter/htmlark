@@ -15,7 +15,9 @@ def main():
     pageurl = sys.argv[1]
     print("Processing {}".format(pageurl))
 
-    soup = BeautifulSoup(requests.get(pageurl).text)
+    # Default parser skips some images on some pages
+    # TODO: Command-line option to select parser
+    soup = BeautifulSoup(requests.get(pageurl).text, "html.parser")
     imgtags = soup.find_all('img')
     for image in imgtags:
         print("Image found: " + image['src'])
