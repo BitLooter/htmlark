@@ -19,14 +19,9 @@ def get_options():
                         help="Select HTML parser. See manual for details.")
     return parser.parse_args()
 
-def main():
-    options = get_options()
-
-    pageurl = options.webpage
-    print("Processing {}".format(pageurl))
-
+def save_page(pageurl, parser):
     # Not all parsers are equal - if one skips resources, try another
-    soup = BeautifulSoup(requests.get(pageurl).text, options.parser)
+    soup = BeautifulSoup(requests.get(pageurl).text, parser)
     imgtags = soup.find_all('img')
     for image in imgtags:
         print("Image found: " + image['src'])
@@ -41,6 +36,14 @@ def main():
     outfile = open('out.html', 'w')
     outfile.write(str(soup))
     outfile.close()
+
+def main():
+    options = get_options()
+
+    print("Processing {}".format(options.webpage))
+
+    save_page(options.webpage, options.parser)
+
     print("All done, file written to " + "out.html")
 
 if __name__ == "__main__":
