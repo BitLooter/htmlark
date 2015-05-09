@@ -2,17 +2,24 @@
 
 # Pack a webpage including images and CSS into a single HTML file.
 
-import sys
+import argparse
 import requests
 import base64
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
-#TODO: Properly parse command line
 #TODO: Ignore files already data-URI encoded
 
+def get_options():
+    parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
+    parser.add_argument('webpage', help="URL or path of webpage to convert")
+    parser.add_argument('-p', '--parser', help="Select HTML parser")
+    return parser.parse_args()
+
 def main():
-    pageurl = sys.argv[1]
+    options = get_options()
+
+    pageurl = options.webpage
     print("Processing {}".format(pageurl))
 
     # Default parser skips some images on some pages
