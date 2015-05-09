@@ -31,6 +31,13 @@ def make_data_uri(mimetype, data):
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
+def encode_resource(resource_url, page_url):
+    """Downloads and data-URI-encodes an external resource (online or local)"""
+    url = urljoin(page_url, resource_url)
+    request = requests.get(url)
+    #TODO: If no Content-Type header (or local file) use mimetypes module
+    return make_data_uri(request.headers['Content-Type'], request.content)
+
 def convert_page(pageurl, parser, callback=lambda *_:None):
     """
     The part that does all the real work.
@@ -39,21 +46,30 @@ def convert_page(pageurl, parser, callback=lambda *_:None):
     pageurl - URL or path of web page to convert.
     parser - Parser for Beautiful Soup 4 to use. See BS4's docs for more info.
     callback - Called before a new resource is processed. Takes a BS4 tag
-        object and the full URL as parameters.
+        object as a parameter.
 
     Returns: String containing the new webpage HTML.
     """
 
     # Not all parsers are equal - if one skips resources, try another
     soup = BeautifulSoup(requests.get(pageurl).text, parser)
-    imgtags = soup.find_all('img')
+    # Things to test for: tag case, attribute case, missing attributes,
+    # duplicate attributes
+    imgtags = soup('img')
     for image in imgtags:
-        url = urljoin(pageurl, image['src'])
-        callback(image, url)
-        imagerequest = requests.get(url)
-        #TODO: If no Content-Type header (or local file) use mimetypes module
-        image['src'] = make_data_uri(imagerequest.headers['Content-Type'],
-                                     imagerequest.content)
+        callback(image)
+        image['src'] = encode_resource(image['src'], pageurl)
+    csstags = soup('link')
+    for css in csstags:
+        # 'rel' can have multiple values and BS4 represents it as a list
+        if 'stylesheet' in css['rel']:
+            callback(css)
+            css['href'] = encode_resource(css['href'], pageurl)
+    scripttags = soup('script')
+    for script in scripttags:
+        if 'src' in script.attrs:
+            callback(script)
+            script['src'] = encode_resource(script['src'], pageurl)
 
     return str(soup)
 
@@ -64,10 +80,14 @@ def main():
 
     print("Processing {}".format(options.webpage))
 
-    def info_callback(tag, url):
+    def info_callback(tag):
         """Displays progress information during conversion"""
         if tag.name == 'img':
             tagtype = "Image"
+        elif tag.name == 'link':
+            tagtype = "CSS"
+        elif tag.name == 'script':
+            tagtype = "JS"
         else:
             tagtype = tag.name
 
