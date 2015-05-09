@@ -1,2 +1,6 @@
 Port to Chrome/Firefox extension
 Option for image optimization
+Domain blacklist (e.g. skipping ad/tracking networks)
+Domain whitelist, including restricting to page's domain
+iframe support
+Options to ignore images/css/js/etc.
