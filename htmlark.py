@@ -25,19 +25,21 @@ def make_data_uri(mimetype, data):
     Converts data into a base64-encoded data URI.
 
     Arguments:
-    mimetype - Text string containing the MIME type of data (e.g. image/jpeg)
+    mimetype - String containing the MIME type of data (e.g. image/jpeg)
     data - Raw data to be encoded.
     """
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
-def convert_page(pageurl, parser):
+def convert_page(pageurl, parser, callback=lambda *_:None):
     """
     The part that does all the real work.
 
     Arguments:
     pageurl - URL or path of web page to convert.
-    parser - Parser for Beautiful Soup to use. See BS's docs for more info.
+    parser - Parser for Beautiful Soup 4 to use. See BS4's docs for more info.
+    callback - Called before a new resource is processed. Takes a BS4 tag
+        object and the full URL as parameters.
 
     Returns: String containing the new webpage HTML.
     """
@@ -46,8 +48,8 @@ def convert_page(pageurl, parser):
     soup = BeautifulSoup(requests.get(pageurl).text, parser)
     imgtags = soup.find_all('img')
     for image in imgtags:
-        print("Image found: " + image['src'])
         url = urljoin(pageurl, image['src'])
+        callback(image, url)
         imagerequest = requests.get(url)
         #TODO: If no Content-Type header (or local file) use mimetypes module
         image['src'] = make_data_uri(imagerequest.headers['Content-Type'],
@@ -62,7 +64,24 @@ def main():
 
     print("Processing {}".format(options.webpage))
 
-    newhtml = convert_page(options.webpage, options.parser)
+    def info_callback(tag, url):
+        """Displays progress information during conversion"""
+        if tag.name == 'img':
+            tagtype = "Image"
+        else:
+            tagtype = tag.name
+
+        if 'src' in tag.attrs:
+            tagurl = tag['src']
+        elif 'href' in tag.attrs:
+            tagurl = tag['href']
+        else:
+            # If this code is used update function to use the URL from this tag
+            tagurl = "<Unknown URL>"
+
+        print("{}: {}".format(tagtype, tagurl))
+
+    newhtml = convert_page(options.webpage, options.parser, callback=info_callback)
 
     outfile = open('out.html', 'w')
     outfile.write(newhtml)
