@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 #TODO: Ignore files already data-URI encoded
 
 def get_options():
+    """Parses command line options"""
     parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
     parser.add_argument('webpage', help="URL or path of webpage to convert")
     #TODO: Check for lxml/html5lib availability, use by default if exists
@@ -20,10 +21,27 @@ def get_options():
     return parser.parse_args()
 
 def make_data_uri(mimetype, data):
+    """
+    Converts data into a base64-encoded data URI.
+
+    Arguments:
+    mimetype - Text string containing the MIME type of data (e.g. image/jpeg)
+    data - Raw data to be encoded.
+    """
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
-def save_page(pageurl, parser):
+def convert_page(pageurl, parser):
+    """
+    The part that does all the real work.
+
+    Arguments:
+    pageurl - URL or path of web page to convert.
+    parser - Parser for Beautiful Soup to use. See BS's docs for more info.
+
+    Returns: String containing the new webpage HTML.
+    """
+
     # Not all parsers are equal - if one skips resources, try another
     soup = BeautifulSoup(requests.get(pageurl).text, parser)
     imgtags = soup.find_all('img')
@@ -35,18 +53,20 @@ def save_page(pageurl, parser):
         image['src'] = make_data_uri(imagerequest.headers['Content-Type'],
                                      imagerequest.content)
 
-    # Conversion complete, write output and cleanup
-    outfile = open('out.html', 'w')
-    outfile.write(str(soup))
-    outfile.close()
+    return str(soup)
 
 def main():
+    """Script's main function, used when called as a command-line program"""
+
     options = get_options()
 
     print("Processing {}".format(options.webpage))
 
-    save_page(options.webpage, options.parser)
+    newhtml = convert_page(options.webpage, options.parser)
 
+    outfile = open('out.html', 'w')
+    outfile.write(newhtml)
+    outfile.close()
     print("All done, file written to " + "out.html")
 
 if __name__ == "__main__":
