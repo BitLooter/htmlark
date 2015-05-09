@@ -19,6 +19,10 @@ def get_options():
                         help="Select HTML parser. See manual for details.")
     return parser.parse_args()
 
+def make_data_uri(mimetype, data):
+    encoded_data = base64.b64encode(data).decode()
+    return "data:{};base64,{}".format(mimetype, encoded_data)
+
 def save_page(pageurl, parser):
     # Not all parsers are equal - if one skips resources, try another
     soup = BeautifulSoup(requests.get(pageurl).text, parser)
@@ -27,10 +31,9 @@ def save_page(pageurl, parser):
         print("Image found: " + image['src'])
         url = urljoin(pageurl, image['src'])
         imagerequest = requests.get(url)
-        imageencoded = base64.b64encode(imagerequest.content).decode()
         #TODO: If no Content-Type header (or local file) use mimetypes module
-        imagetype = imagerequest.headers['Content-Type']
-        image['src'] = "data:{};base64,{}".format(imagetype, imageencoded)
+        image['src'] = make_data_uri(imagerequest.headers['Content-Type'],
+                                     imagerequest.content)
 
     # Conversion complete, write output and cleanup
     outfile = open('out.html', 'w')
