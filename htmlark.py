@@ -13,7 +13,10 @@ from bs4 import BeautifulSoup
 def get_options():
     parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
     parser.add_argument('webpage', help="URL or path of webpage to convert")
-    parser.add_argument('-p', '--parser', help="Select HTML parser")
+    #TODO: Check for lxml/html5lib availability, use by default if exists
+    parser.add_argument('-p', '--parser', default='html.parser',
+                        choices=['html.parser', 'lxml', 'html5lib'],
+                        help="Select HTML parser. See manual for details.")
     return parser.parse_args()
 
 def main():
@@ -22,9 +25,8 @@ def main():
     pageurl = options.webpage
     print("Processing {}".format(pageurl))
 
-    # Default parser skips some images on some pages
-    # TODO: Command-line option to select parser
-    soup = BeautifulSoup(requests.get(pageurl).text, "html.parser")
+    # Not all parsers are equal - if one skips resources, try another
+    soup = BeautifulSoup(requests.get(pageurl).text, options.parser)
     imgtags = soup.find_all('img')
     for image in imgtags:
         print("Image found: " + image['src'])
