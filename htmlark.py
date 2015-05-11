@@ -9,11 +9,18 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 #TODO: Ignore files already data-URI encoded
+#TODO: Read/write from/to stdin/stdout
 
 def get_options():
     """Parses command line options"""
     parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
     parser.add_argument('webpage', help="URL or path of webpage to convert")
+    parser.add_argument('--ignore-images', action='store_true', default=False,
+                        help="Ignores images during conversion")
+    parser.add_argument('--ignore-css', action='store_true', default=False,
+                        help="Ignores stylesheets during conversion")
+    parser.add_argument('--ignore-js', action='store_true', default=False,
+                        help="Ignores Javascript during conversion")
     #TODO: Check for lxml/html5lib availability, use by default if exists
     parser.add_argument('-p', '--parser', default='html.parser',
                         choices=['html.parser', 'lxml', 'html5lib'],
@@ -38,13 +45,17 @@ def encode_resource(resource_url, page_url):
     #TODO: If no Content-Type header (or local file) use mimetypes module
     return make_data_uri(request.headers['Content-Type'], request.content)
 
-def convert_page(pageurl, parser, callback=lambda *_:None):
+def convert_page(pageurl, parser,  callback=lambda *_:None,
+                 ignore_images=False, ignore_css=False, ignore_js=False):
     """
     The part that does all the real work.
 
     Arguments:
     pageurl - URL or path of web page to convert.
     parser - Parser for Beautiful Soup 4 to use. See BS4's docs for more info.
+    ignore_images - If true do not process <img> tags
+    ignore_css - If true do not process <link> (stylesheet) tags
+    ignore_js - If true do not process <script> tags
     callback - Called before a new resource is processed. Takes a BS4 tag
         object as a parameter.
 
@@ -55,21 +66,24 @@ def convert_page(pageurl, parser, callback=lambda *_:None):
     soup = BeautifulSoup(requests.get(pageurl).text, parser)
     # Things to test for: tag case, attribute case, missing attributes,
     # duplicate attributes
-    imgtags = soup('img')
-    for image in imgtags:
-        callback(image)
-        image['src'] = encode_resource(image['src'], pageurl)
-    csstags = soup('link')
-    for css in csstags:
-        # 'rel' can have multiple values and BS4 represents it as a list
-        if 'stylesheet' in css['rel']:
-            callback(css)
-            css['href'] = encode_resource(css['href'], pageurl)
-    scripttags = soup('script')
-    for script in scripttags:
-        if 'src' in script.attrs:
-            callback(script)
-            script['src'] = encode_resource(script['src'], pageurl)
+    if not ignore_images:
+        imgtags = soup('img')
+        for image in imgtags:
+            callback(image)
+            image['src'] = encode_resource(image['src'], pageurl)
+    if not ignore_css:
+        csstags = soup('link')
+        for css in csstags:
+            # 'rel' can have multiple values and BS4 represents it as a list
+            if 'stylesheet' in css['rel']:
+                callback(css)
+                css['href'] = encode_resource(css['href'], pageurl)
+    if not ignore_js:
+        scripttags = soup('script')
+        for script in scripttags:
+            if 'src' in script.attrs:
+                callback(script)
+                script['src'] = encode_resource(script['src'], pageurl)
 
     return str(soup)
 
@@ -101,7 +115,11 @@ def main():
 
         print("{}: {}".format(tagtype, tagurl))
 
-    newhtml = convert_page(options.webpage, options.parser, callback=info_callback)
+    newhtml = convert_page(options.webpage, options.parser,
+                           ignore_images=options.ignore_images,
+                           ignore_css=options.ignore_css,
+                           ignore_js=options.ignore_js,
+                           callback=info_callback)
 
     outfile = open('out.html', 'w')
     outfile.write(newhtml)
