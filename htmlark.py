@@ -33,16 +33,17 @@ def make_data_uri(mimetype, data):
     Converts data into a base64-encoded data URI.
 
     Arguments:
-    mimetype - String containing the MIME type of data (e.g. image/jpeg)
+    mimetype - String containing the MIME type of data (e.g. image/jpeg). If
+        None, will be treated as an empty string.
     data - Raw data to be encoded.
     """
+    mimetype = '' if mimetype == None else mimetype
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
 def encode_resource(resource_url):
     """Downloads and data-URI-encodes an external resource (online or local)"""
     content, mimetype = get_resource(resource_url, 'rb')
-    mimetype = '' if mimetype == None else mimetype
     return make_data_uri(mimetype, content)
 
 def get_resource(resource_url, mode):
@@ -62,8 +63,11 @@ def get_resource(resource_url, mode):
         else:
             mimetype = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == '':
+        # '' is local file
         data = open(resource_url, mode).read()
         mimetype, _ = mimetypes.guess_type(resource_url)
+    elif url_parsed.scheme == 'data':
+        raise ValueError("Resource path is a data URI")
     else:
         raise ValueError("Not local path or HTTP/HTTPS URL")
 
@@ -91,26 +95,32 @@ def convert_page(page_path, parser, callback=lambda *_:None,
 
     # Not all parsers are equal - if one skips resources, try another
     soup = BeautifulSoup(page_text, parser)
-    # Things to test for: tag case, attribute case, missing attributes,
-    # duplicate attributes
+    tags = []
+
+    # Gather all the relevant tags together
     if not ignore_images:
-        imgtags = soup('img')
-        for image in imgtags:
-            callback(image)
-            image['src'] = encode_resource(urljoin(page_path, image['src']))
+        tags += soup('img')
     if not ignore_css:
         csstags = soup('link')
         for css in csstags:
-            # 'rel' can have multiple values and BS4 represents it as a list
             if 'stylesheet' in css['rel']:
-                callback(css)
-                css['href'] = encode_resource(urljoin(page_path, css['href']))
+                tags.append(css)
     if not ignore_js:
         scripttags = soup('script')
         for script in scripttags:
             if 'src' in script.attrs:
-                callback(script)
-                script['src'] = encode_resource(urljoin(page_path, script['src']))
+                tags.append(script)
+
+    # Convert the linked resources
+    for tag in tags:
+        tag_url = tag['href'] if tag.name == 'link' else tag['src']
+        tag_data, tag_mime = get_resource(urljoin(page_path, tag_url), 'rb')
+        encoded_resource = make_data_uri(tag_mime, tag_data)
+        if tag.name == 'link':
+            tag['href'] = encoded_resource
+        else:
+            tag['src'] = encoded_resource
+        callback(tag)
 
     return str(soup)
 
