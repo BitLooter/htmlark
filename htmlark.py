@@ -41,12 +41,7 @@ def make_data_uri(mimetype, data):
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
-def encode_resource(resource_url):
-    """Downloads and data-URI-encodes an external resource (online or local)"""
-    content, mimetype = get_resource(resource_url, 'rb')
-    return make_data_uri(mimetype, content)
-
-def get_resource(resource_url, mode):
+def get_resource(resource_url):
     """
     Downloads or reads a file (online or local)
 
@@ -57,14 +52,14 @@ def get_resource(resource_url, mode):
     url_parsed = urlparse(resource_url)
     if url_parsed.scheme in ['http', 'https']:
         request = requests.get(resource_url)
-        data = request.content if mode == 'rb' else request.text
+        data = request.content
         if 'Content-Type' in request.headers:
             mimetype = request.headers['Content-Type']
         else:
             mimetype = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == '':
         # '' is local file
-        data = open(resource_url, mode).read()
+        data = open(resource_url, 'rb').read()
         mimetype, _ = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == 'data':
         raise ValueError("Resource path is a data URI")
@@ -76,7 +71,7 @@ def get_resource(resource_url, mode):
 def convert_page(page_path, parser, callback=lambda *_:None,
                  ignore_images=False, ignore_css=False, ignore_js=False):
     """
-    The part that does all the real work.
+    Takes an HTML file or URL and outputs new HTML with resources as data URIs.
 
     Arguments:
     pageurl - URL or path of web page to convert.
@@ -91,7 +86,7 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     """
 
     # Get page HTML, whether from a server or a local file
-    page_text, _ = get_resource(page_path, 'r')
+    page_text, _ = get_resource(page_path)
 
     # Not all parsers are equal - if one skips resources, try another
     soup = BeautifulSoup(page_text, parser)
@@ -114,13 +109,13 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     # Convert the linked resources
     for tag in tags:
         tag_url = tag['href'] if tag.name == 'link' else tag['src']
-        tag_data, tag_mime = get_resource(urljoin(page_path, tag_url), 'rb')
+        tag_data, tag_mime = get_resource(urljoin(page_path, tag_url))
         encoded_resource = make_data_uri(tag_mime, tag_data)
         if tag.name == 'link':
             tag['href'] = encoded_resource
         else:
             tag['src'] = encoded_resource
-        callback(tag)
+        callback(tag.name, tag_url)
 
     return str(soup)
 
@@ -131,26 +126,17 @@ def main():
 
     print("Processing {}".format(options.webpage))
 
-    def info_callback(tag):
+    def info_callback(tag_name, tag_url):
         """Displays progress information during conversion"""
-        if tag.name == 'img':
+        if tag_name == 'img':
             tagtype = "Image"
-        elif tag.name == 'link':
+        elif tag_name == 'link':
             tagtype = "CSS"
-        elif tag.name == 'script':
+        elif tag_name == 'script':
             tagtype = "JS"
         else:
-            tagtype = tag.name
-
-        if 'src' in tag.attrs:
-            tagurl = tag['src']
-        elif 'href' in tag.attrs:
-            tagurl = tag['href']
-        else:
-            # If this code is used update function to use the URL from this tag
-            tagurl = "<Unknown URL>"
-
-        print("{}: {}".format(tagtype, tagurl))
+            tagtype = tag_name
+        print("{}: {}".format(tagtype, tag_url))
 
     newhtml = convert_page(options.webpage, options.parser,
                            ignore_images=options.ignore_images,
