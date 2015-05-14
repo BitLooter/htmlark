@@ -62,9 +62,9 @@ def get_resource(resource_url):
         data = open(resource_url, 'rb').read()
         mimetype, _ = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == 'data':
-        raise ValueError("Resource path is a data URI")
+        raise ValueError("Resource path is a data URI", url_parsed.scheme)
     else:
-        raise ValueError("Not local path or HTTP/HTTPS URL")
+        raise ValueError("Not local path or HTTP/HTTPS URL", url_parsed.scheme)
 
     return data, mimetype
 
@@ -109,7 +109,20 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     # Convert the linked resources
     for tag in tags:
         tag_url = tag['href'] if tag.name == 'link' else tag['src']
-        tag_data, tag_mime = get_resource(urljoin(page_path, tag_url))
+        try:
+            tag_data, tag_mime = get_resource(urljoin(page_path, tag_url))
+            #TODO: Handle read errors
+        except ValueError as e:
+            scheme = e.args[1]
+            # Don't need to process things that are already data URIs
+            if scheme == 'data':
+                callback(tag.name, "Already data URI")
+                continue
+            else:
+                # htmlark can only get from http/https and local files
+                callback(tag.name, "Unknown protocol in URL: " + tag_url)
+                continue
+
         encoded_resource = make_data_uri(tag_mime, tag_data)
         if tag.name == 'link':
             tag['href'] = encoded_resource
@@ -144,6 +157,7 @@ def main():
                            ignore_js=options.ignore_js,
                            callback=info_callback)
 
+    #TODO: Catch errors here, use with
     outfile = open('out.html', 'w')
     outfile.write(newhtml)
     outfile.close()
