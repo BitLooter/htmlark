@@ -2,6 +2,7 @@
 
 # Pack a webpage including images and CSS into a single HTML file.
 
+import sys
 import argparse
 import requests
 import base64
@@ -9,23 +10,28 @@ from urllib.parse import urlparse, urljoin
 import mimetypes
 from bs4 import BeautifulSoup
 
-#TODO: Ignore files already data-URI encoded
 #TODO: Read/write from/to stdin/stdout
 
 def get_options():
     """Parses command line options"""
     parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
     parser.add_argument('webpage', help="URL or path of webpage to convert")
-    parser.add_argument('--ignore-images', action='store_true', default=False,
+    parser.add_argument('-I', '--ignore-images', action='store_true', default=False,
                         help="Ignores images during conversion")
-    parser.add_argument('--ignore-css', action='store_true', default=False,
+    parser.add_argument('-C', '--ignore-css', action='store_true', default=False,
                         help="Ignores stylesheets during conversion")
-    parser.add_argument('--ignore-js', action='store_true', default=False,
+    parser.add_argument('-J', '--ignore-js', action='store_true', default=False,
                         help="Ignores Javascript during conversion")
     #TODO: Check for lxml/html5lib availability, use by default if exists
     parser.add_argument('-p', '--parser', default='html.parser',
                         choices=['html.parser', 'lxml', 'html5lib'],
-                        help="Select HTML parser. See manual for details.")
+                        help="""Select HTML parser. If not specifed, htmlark
+                                will try to use lxml first, then html5lib, then
+                                fall back to html.parser if neither of those
+                                are available. See documentation for more
+                                information.""")
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help="Prints information during conversion")
     return parser.parse_args()
 
 def make_data_uri(mimetype, data):
@@ -132,12 +138,19 @@ def convert_page(page_path, parser, callback=lambda *_:None,
 
     return str(soup)
 
+
 def main():
     """Script's main function, used when called as a command-line program"""
 
     options = get_options()
 
-    print("Processing {}".format(options.webpage))
+    # All messages use verbose_print() to ensure they go the right place
+    if options.verbose:
+        verbose_print = lambda m: print(m, file=sys.stderr)
+    else:
+        verbose_print = lambda _: None
+
+    verbose_print("Processing {}".format(options.webpage))
 
     def info_callback(tag_name, tag_url):
         """Displays progress information during conversion"""
@@ -149,7 +162,7 @@ def main():
             tagtype = "JS"
         else:
             tagtype = tag_name
-        print("{}: {}".format(tagtype, tag_url))
+        verbose_print("{}: {}".format(tagtype, tag_url))
 
     newhtml = convert_page(options.webpage, options.parser,
                            ignore_images=options.ignore_images,
@@ -161,7 +174,7 @@ def main():
     outfile = open('out.html', 'w')
     outfile.write(newhtml)
     outfile.close()
-    print("All done, file written to " + "out.html")
+    verbose_print("All done, file written to " + "out.html")
 
 if __name__ == "__main__":
     main()
