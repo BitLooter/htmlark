@@ -15,7 +15,9 @@ from bs4 import BeautifulSoup
 def get_options():
     """Parses command line options"""
     parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
-    parser.add_argument('webpage', help="URL or path of webpage to convert")
+    parser.add_argument('webpage', nargs='?', default=None,
+                        help="""URL or path of webpage to convert. If not
+                        specified, read from STDIN.""")
     parser.add_argument('-I', '--ignore-images', action='store_true', default=False,
                         help="Ignores images during conversion")
     parser.add_argument('-C', '--ignore-css', action='store_true', default=False,
@@ -91,8 +93,11 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     Returns: String containing the new webpage HTML.
     """
 
-    # Get page HTML, whether from a server or a local file
-    page_text, _ = get_resource(page_path)
+    # Get page HTML, whether from a server, a local file, or stdin
+    if page_path == None:
+        page_text = sys.stdin.read()
+    else:
+        page_text, _ = get_resource(page_path)
 
     # Not all parsers are equal - if one skips resources, try another
     soup = BeautifulSoup(page_text, parser)
@@ -150,7 +155,10 @@ def main():
     else:
         verbose_print = lambda _: None
 
-    verbose_print("Processing {}".format(options.webpage))
+    if options.webpage == None:
+        verbose_print("Reading from STDIN")
+    else:
+        verbose_print("Processing {}".format(options.webpage))
 
     def info_callback(tag_name, tag_url):
         """Displays progress information during conversion"""
