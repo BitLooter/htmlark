@@ -14,16 +14,24 @@ from bs4 import BeautifulSoup
 
 def get_options():
     """Parses command line options"""
-    parser = argparse.ArgumentParser(description="Converts a webpage including external resources into a single HTML file")
+    parser = argparse.ArgumentParser(description="""
+        Converts a webpage including external resources into a single HTML
+        file. Note that resources loaded with JavaScript will not be handled
+        by this program, it will only work properly with static pages.""")
+    # Can't make this an argparse.FileType, because it could be a local path
+    # or an URL, and convert_page needs the path
     parser.add_argument('webpage', nargs='?', default=None,
                         help="""URL or path of webpage to convert. If not
                         specified, read from STDIN.""")
+    parser.add_argument('-o', '--output', default=sys.stdout,
+                        type=argparse.FileType('w', encoding='UTF-8'),
+                        help="File to write output. Defaults to STDOUT.")
     parser.add_argument('-I', '--ignore-images', action='store_true', default=False,
                         help="Ignores images during conversion")
     parser.add_argument('-C', '--ignore-css', action='store_true', default=False,
                         help="Ignores stylesheets during conversion")
     parser.add_argument('-J', '--ignore-js', action='store_true', default=False,
-                        help="Ignores Javascript during conversion")
+                        help="Ignores external JavaScript during conversion")
     #TODO: Check for lxml/html5lib availability, use by default if exists
     parser.add_argument('-p', '--parser', default='html.parser',
                         choices=['html.parser', 'lxml', 'html5lib'],
@@ -149,16 +157,17 @@ def main():
 
     options = get_options()
 
-    # All messages use verbose_print() to ensure they go the right place
+    # All messages use print_verbose() or print_error()
+    print_error = lambda m: print(m, file=sys.stderr)
     if options.verbose:
-        verbose_print = lambda m: print(m, file=sys.stderr)
+        print_verbose = lambda m: print(m, file=sys.stderr)
     else:
-        verbose_print = lambda _: None
+        print_verbose = lambda _: None
 
     if options.webpage == None:
-        verbose_print("Reading from STDIN")
+        print_verbose("Reading from STDIN")
     else:
-        verbose_print("Processing {}".format(options.webpage))
+        print_verbose("Processing {}".format(options.webpage))
 
     def info_callback(tag_name, tag_url):
         """Displays progress information during conversion"""
@@ -170,7 +179,7 @@ def main():
             tagtype = "JS"
         else:
             tagtype = tag_name
-        verbose_print("{}: {}".format(tagtype, tag_url))
+        print_verbose("{}: {}".format(tagtype, tag_url))
 
     newhtml = convert_page(options.webpage, options.parser,
                            ignore_images=options.ignore_images,
@@ -178,11 +187,14 @@ def main():
                            ignore_js=options.ignore_js,
                            callback=info_callback)
 
-    #TODO: Catch errors here, use with
-    outfile = open('out.html', 'w')
-    outfile.write(newhtml)
-    outfile.close()
-    verbose_print("All done, file written to " + "out.html")
+    try:
+        options.output.write(newhtml)
+    except OSError as e:
+        print_error("Unable to write to output file: errno {}, {}".format(
+                        e.errno, e.strerror))
+        sys.exit(1)
+
+    print_verbose("All done, output written to " + options.output.name)
 
 if __name__ == "__main__":
     main()
