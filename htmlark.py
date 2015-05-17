@@ -10,8 +10,6 @@ from urllib.parse import urlparse, urljoin
 import mimetypes
 from bs4 import BeautifulSoup
 
-#TODO: Read/write from/to stdin/stdout
-
 def get_options():
     """Parses command line options"""
     parser = argparse.ArgumentParser(description="""
@@ -26,6 +24,8 @@ def get_options():
     parser.add_argument('-o', '--output', default=sys.stdout,
                         type=argparse.FileType('w', encoding='UTF-8'),
                         help="File to write output. Defaults to STDOUT.")
+    parser.add_argument('-E', '--ignore-errors', action='store_true', default=False,
+                        help="Ignores unreadable resources")
     parser.add_argument('-I', '--ignore-images', action='store_true', default=False,
                         help="Ignores images during conversion")
     parser.add_argument('-C', '--ignore-css', action='store_true', default=False,
@@ -95,8 +95,10 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     ignore_images - If true do not process <img> tags
     ignore_css - If true do not process <link> (stylesheet) tags
     ignore_js - If true do not process <script> tags
-    callback - Called before a new resource is processed. Takes a BS4 tag
-        object as a parameter.
+    callback - Called before a new resource is processed. Takes three
+        parameters: severity level ('INFO' or 'ERROR'), a string with the
+        catagory of the callback (usually the tag related to the message),
+        and the message data (usually a string to be printed).
 
     Returns: String containing the new webpage HTML.
     """
@@ -129,17 +131,22 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     for tag in tags:
         tag_url = tag['href'] if tag.name == 'link' else tag['src']
         try:
+            #BUG: doesn't work if using relative remote URLs in a local file
             tag_data, tag_mime = get_resource(urljoin(page_path, tag_url))
             #TODO: Handle read errors
+        except FileNotFoundError as e:
+            raise
         except ValueError as e:
+            # Raised when a problem with the URL is found
             scheme = e.args[1]
             # Don't need to process things that are already data URIs
             if scheme == 'data':
-                callback(tag.name, "Already data URI")
+                callback('INFO', tag.name, "Already data URI")
                 continue
             else:
                 # htmlark can only get from http/https and local files
-                callback(tag.name, "Unknown protocol in URL: " + tag_url)
+                callback('ERROR', tag.name, "Unknown protocol in URL: " + tag_url)
+                #TODO: Only continue if ignoring errors
                 continue
 
         encoded_resource = make_data_uri(tag_mime, tag_data)
@@ -147,7 +154,7 @@ def convert_page(page_path, parser, callback=lambda *_:None,
             tag['href'] = encoded_resource
         else:
             tag['src'] = encoded_resource
-        callback(tag.name, tag_url)
+        callback('INFO', tag.name, tag_url)
 
     return str(soup)
 
@@ -169,17 +176,26 @@ def main():
     else:
         print_verbose("Processing {}".format(options.webpage))
 
-    def info_callback(tag_name, tag_url):
+    def info_callback(severity, message_type, message_data):
         """Displays progress information during conversion"""
-        if tag_name == 'img':
+        if message_type == 'img':
             tagtype = "Image"
-        elif tag_name == 'link':
+        elif message_type == 'link':
             tagtype = "CSS"
-        elif tag_name == 'script':
+        elif message_type == 'script':
             tagtype = "JS"
         else:
-            tagtype = tag_name
-        print_verbose("{}: {}".format(tagtype, tag_url))
+            tagtype = message_type
+        # Only display info messages if -v/--verbose flag is set
+        if severity == 'INFO':
+            if options.verbose:
+                print_verbose("{}: {}".format(tagtype, message_data))
+        elif severity == 'ERROR':
+            print_error("{}: {}".format(tagtype, message_data))
+        else:
+            print_error("Unknown message level {}, please tell the author of the program".format(severity))
+            print_error("{}: {}".format(tagtype, message_data))
+
 
     newhtml = convert_page(options.webpage, options.parser,
                            ignore_images=options.ignore_images,
