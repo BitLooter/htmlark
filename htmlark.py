@@ -111,7 +111,9 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     else:
         page_text, _ = get_resource(page_path)
 
-    # Not all parsers are equal - if one skips resources, try another
+    # Not all parsers are equal - it can be specified on the command line
+    # so the user can try another when one fails
+    callback('INFO', 'parser', "Using parser " + parser)
     soup = BeautifulSoup(page_text, parser)
     tags = []
 
