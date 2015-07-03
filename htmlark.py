@@ -8,7 +8,9 @@ import requests
 import base64
 from urllib.parse import urlparse, urljoin
 import mimetypes
-from bs4 import BeautifulSoup
+import bs4
+
+PARSERS = ['lxml', 'html5lib', 'html.parser']
 
 def get_options():
     """Parses command line options"""
@@ -32,14 +34,12 @@ def get_options():
                         help="Ignores stylesheets during conversion")
     parser.add_argument('-J', '--ignore-js', action='store_true', default=False,
                         help="Ignores external JavaScript during conversion")
-    #TODO: Check for lxml/html5lib availability, use by default if exists
-    parser.add_argument('-p', '--parser', default='html.parser',
-                        choices=['html.parser', 'lxml', 'html5lib'],
+    parser.add_argument('-p', '--parser', default='auto',
+                        choices=['html.parser', 'lxml', 'html5lib', 'auto'],
                         help="""Select HTML parser. If not specifed, htmlark
-                                will try to use lxml first, then html5lib, then
-                                fall back to html.parser if neither of those
-                                are available. See documentation for more
-                                information.""")
+                                tries to use lxml, html5lib, and html.parser
+                                in that order (the 'auto' option). See
+                                documentation for more information.""")
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="Prints information during conversion")
     return parser.parse_args()
@@ -113,8 +113,20 @@ def convert_page(page_path, parser, callback=lambda *_:None,
 
     # Not all parsers are equal - it can be specified on the command line
     # so the user can try another when one fails
-    callback('INFO', 'parser', "Using parser " + parser)
-    soup = BeautifulSoup(page_text, parser)
+    if parser == 'auto':
+        for p in PARSERS:
+            try:
+                soup = bs4.BeautifulSoup(page_text, p)
+            except bs4.FeatureNotFound as e:
+                # Try the next parser
+                continue
+            # Parser found, don't try any more
+            callback('INFO', 'parser', "Using parser " + p)
+            break
+    else:
+        soup = bs4.BeautifulSoup(page_text, parser)
+        callback('INFO', 'parser', "Using parser " + parser)
+
     tags = []
 
     # Gather all the relevant tags together
