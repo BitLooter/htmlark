@@ -85,13 +85,15 @@ def get_resource(resource_url):
     return data, mimetype
 
 def convert_page(page_path, parser, callback=lambda *_:None,
-                 ignore_images=False, ignore_css=False, ignore_js=False):
+                 ignore_errors=False, ignore_images=False, ignore_css=False,
+                 ignore_js=False):
     """
     Takes an HTML file or URL and outputs new HTML with resources as data URIs.
 
     Arguments:
     pageurl - URL or path of web page to convert.
     parser - Parser for Beautiful Soup 4 to use. See BS4's docs for more info.
+    ignore_errors - If true do not abort on unreadable resources
     ignore_images - If true do not process <img> tags
     ignore_css - If true do not process <link> (stylesheet) tags
     ignore_js - If true do not process <script> tags
@@ -132,10 +134,20 @@ def convert_page(page_path, parser, callback=lambda *_:None,
         tag_url = tag['href'] if tag.name == 'link' else tag['src']
         try:
             #BUG: doesn't work if using relative remote URLs in a local file
-            tag_data, tag_mime = get_resource(urljoin(page_path, tag_url))
+            fullpath = urljoin(page_path, tag_url)
+            tag_data, tag_mime = get_resource(fullpath)
             #TODO: Handle read errors
+        except requests.exceptions.RequestException:
+            if ignore_errors:
+                callback('ERROR', tag.name, "Can't access URL " + fullpath)
+            else:
+                raise
         except FileNotFoundError as e:
-            raise
+            if ignore_errors:
+                callback('ERROR', tag.name, "Can't read file " + fullpath)
+            else:
+                #TODO: Create and raise an HTMLArkError
+                raise
         except ValueError as e:
             # Raised when a problem with the URL is found
             scheme = e.args[1]
@@ -148,13 +160,13 @@ def convert_page(page_path, parser, callback=lambda *_:None,
                 callback('ERROR', tag.name, "Unknown protocol in URL: " + tag_url)
                 #TODO: Only continue if ignoring errors
                 continue
-
-        encoded_resource = make_data_uri(tag_mime, tag_data)
-        if tag.name == 'link':
-            tag['href'] = encoded_resource
         else:
-            tag['src'] = encoded_resource
-        callback('INFO', tag.name, tag_url)
+            encoded_resource = make_data_uri(tag_mime, tag_data)
+            if tag.name == 'link':
+                tag['href'] = encoded_resource
+            else:
+                tag['src'] = encoded_resource
+            callback('INFO', tag.name, tag_url)
 
     return str(soup)
 
@@ -198,6 +210,7 @@ def main():
 
 
     newhtml = convert_page(options.webpage, options.parser,
+                           ignore_errors=options.ignore_errors,
                            ignore_images=options.ignore_images,
                            ignore_css=options.ignore_css,
                            ignore_js=options.ignore_js,
