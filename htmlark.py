@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Converts a multi-file webpage into a single file, using data URIs."""
-
-# Pack a webpage including images and CSS into a single HTML file.
+"""Pack a webpage including images and CSS into a single HTML file, using data URIs."""
 
 import argparse
 import base64
@@ -15,60 +13,30 @@ import requests
 PARSERS = ['lxml', 'html5lib', 'html.parser']
 
 
-def get_options():
-    """Parse command line options."""
-    parser = argparse.ArgumentParser(description="""
-        Converts a webpage including external resources into a single HTML
-        file. Note that resources loaded with JavaScript will not be handled
-        by this program, it will only work properly with static pages.""")
-    # Can't make this an argparse.FileType, because it could be a local path
-    # or an URL, and convert_page needs the path
-    parser.add_argument('webpage', nargs='?', default=None,
-                        help="""URL or path of webpage to convert. If not
-                        specified, read from STDIN.""")
-    parser.add_argument('-o', '--output', default=sys.stdout,
-                        type=argparse.FileType('w', encoding='UTF-8'),
-                        help="File to write output. Defaults to STDOUT.")
-    parser.add_argument('-E', '--ignore-errors', action='store_true', default=False,
-                        help="Ignores unreadable resources")
-    parser.add_argument('-I', '--ignore-images', action='store_true', default=False,
-                        help="Ignores images during conversion")
-    parser.add_argument('-C', '--ignore-css', action='store_true', default=False,
-                        help="Ignores stylesheets during conversion")
-    parser.add_argument('-J', '--ignore-js', action='store_true', default=False,
-                        help="Ignores external JavaScript during conversion")
-    parser.add_argument('-p', '--parser', default='auto',
-                        choices=['html.parser', 'lxml', 'html5lib', 'auto'],
-                        help="""Select HTML parser. If not specifed, htmlark
-                                tries to use lxml, html5lib, and html.parser
-                                in that order (the 'auto' option). See
-                                documentation for more information.""")
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
-                        help="Prints information during conversion")
-    return parser.parse_args()
-
-
 def make_data_uri(mimetype, data):
-    """
-    Convert data into a base64-encoded data URI.
+    """Convert data into a base64-encoded data URI.
 
-    Arguments:
-    mimetype - String containing the MIME type of data (e.g. image/jpeg). If
-        None, will be treated as an empty string.
-    data - Raw data to be encoded.
+    Parameters:
+        mimetype (str): String containing the MIME type of data (e.g.
+            image/jpeg). If ``None``, will be treated as an empty string.
+        data (str): Raw data to be encoded.
+    Returns:
+        str: Input data encoded into a data URI.
     """
     mimetype = '' if mimetype is None else mimetype
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
 
-def get_resource(resource_url):
-    """
-    Download or reads a file (online or local).
+def get_resource(resource_url: str):
+    """Download or reads a file (online or local).
 
-    Arguments:
-    resource_url - URL or path of resource to load
-    mode - Returns text string if 'r', or bytes if 'rb'
+    Parameters:
+        resource_url (str): URL or path of resource to load
+    Returns:
+        str, str: Tuple containing the resource's data and its MIME type.
+    Raises:
+        ValueError: If ``resource_url``'s protocol is invalid.
     """
     url_parsed = urlparse(resource_url)
     if url_parsed.scheme in ['http', 'https']:
@@ -93,22 +61,27 @@ def get_resource(resource_url):
 def convert_page(page_path, parser, callback=lambda *_: None,
                  ignore_errors=False, ignore_images=False, ignore_css=False,
                  ignore_js=False):
-    """
-    Take an HTML file or URL and outputs new HTML with resources as data URIs.
+    """Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
-    Arguments:
-    pageurl - URL or path of web page to convert.
-    parser - Parser for Beautiful Soup 4 to use. See BS4's docs for more info.
-    ignore_errors - If true do not abort on unreadable resources
-    ignore_images - If true do not process <img> tags
-    ignore_css - If true do not process <link> (stylesheet) tags
-    ignore_js - If true do not process <script> tags
-    callback - Called before a new resource is processed. Takes three
-        parameters: severity level ('INFO' or 'ERROR'), a string with the
-        catagory of the callback (usually the tag related to the message),
-        and the message data (usually a string to be printed).
+    Parameters:
+        pageurl (str): URL or path of web page to convert.
+        parser (str): Parser for Beautiful Soup 4 to use. See BS4's docs.
+    Keyword Arguments:
+        ignore_errors (bool): If ``True`` do not abort on unreadable resources.
+            Default: ``False``
+        ignore_images (bool): If ``True`` do not process ``<img>`` tags.
+            Default: ``False``
+        ignore_css (bool): If ``True`` do not process ``<link>`` (stylesheet) tags.
+            Default: ``False``
+        ignore_js (bool): If ``True`` do not process ``<script>`` tags.
+            Default: ``False``
+        callback (function): Called before a new resource is processed. Takes
+            three parameters: severity level ('INFO' or 'ERROR'), a string with
+            the category of the callback (usually the tag related to the
+            message), and the message data (usually a string to be printed).
 
-    Returns: String containing the new webpage HTML.
+    Returns:
+        str: The new webpage HTML.
     """
     # Get page HTML, whether from a server, a local file, or stdin
     if page_path is None:
@@ -189,6 +162,39 @@ def convert_page(page_path, parser, callback=lambda *_: None,
             callback('INFO', tag.name, tag_url)
 
     return str(soup)
+
+
+def get_options():
+    """Parse command line options."""
+    parser = argparse.ArgumentParser(description="""
+        Converts a webpage including external resources into a single HTML
+        file. Note that resources loaded with JavaScript will not be handled
+        by this program, it will only work properly with static pages.""")
+    # Can't make this an argparse.FileType, because it could be a local path
+    # or an URL, and convert_page needs the path
+    parser.add_argument('webpage', nargs='?', default=None,
+                        help="""URL or path of webpage to convert. If not
+                        specified, read from STDIN.""")
+    parser.add_argument('-o', '--output', default=sys.stdout,
+                        type=argparse.FileType('w', encoding='UTF-8'),
+                        help="File to write output. Defaults to STDOUT.")
+    parser.add_argument('-E', '--ignore-errors', action='store_true', default=False,
+                        help="Ignores unreadable resources")
+    parser.add_argument('-I', '--ignore-images', action='store_true', default=False,
+                        help="Ignores images during conversion")
+    parser.add_argument('-C', '--ignore-css', action='store_true', default=False,
+                        help="Ignores stylesheets during conversion")
+    parser.add_argument('-J', '--ignore-js', action='store_true', default=False,
+                        help="Ignores external JavaScript during conversion")
+    parser.add_argument('-p', '--parser', default='auto',
+                        choices=['html.parser', 'lxml', 'html5lib', 'auto'],
+                        help="""Select HTML parser. If not specifed, htmlark
+                                tries to use lxml, html5lib, and html.parser
+                                in that order (the 'auto' option). See
+                                documentation for more information.""")
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help="Prints information during conversion")
+    return parser.parse_args()
 
 
 def main():
