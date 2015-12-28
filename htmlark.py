@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
+"""Converts a multi-file webpage into a single file, using data URIs."""
 
 # Pack a webpage including images and CSS into a single HTML file.
 
-import sys
 import argparse
-import requests
 import base64
-from urllib.parse import urlparse, urljoin
 import mimetypes
+import sys
+from urllib.parse import urljoin, urlparse
+
 import bs4
+import requests
 
 PARSERS = ['lxml', 'html5lib', 'html.parser']
 
+
 def get_options():
-    """Parses command line options"""
+    """Parse command line options."""
     parser = argparse.ArgumentParser(description="""
         Converts a webpage including external resources into a single HTML
         file. Note that resources loaded with JavaScript will not be handled
@@ -44,22 +47,24 @@ def get_options():
                         help="Prints information during conversion")
     return parser.parse_args()
 
+
 def make_data_uri(mimetype, data):
     """
-    Converts data into a base64-encoded data URI.
+    Convert data into a base64-encoded data URI.
 
     Arguments:
     mimetype - String containing the MIME type of data (e.g. image/jpeg). If
         None, will be treated as an empty string.
     data - Raw data to be encoded.
     """
-    mimetype = '' if mimetype == None else mimetype
+    mimetype = '' if mimetype is None else mimetype
     encoded_data = base64.b64encode(data).decode()
     return "data:{};base64,{}".format(mimetype, encoded_data)
 
+
 def get_resource(resource_url):
     """
-    Downloads or reads a file (online or local)
+    Download or reads a file (online or local).
 
     Arguments:
     resource_url - URL or path of resource to load
@@ -84,11 +89,12 @@ def get_resource(resource_url):
 
     return data, mimetype
 
-def convert_page(page_path, parser, callback=lambda *_:None,
+
+def convert_page(page_path, parser, callback=lambda *_: None,
                  ignore_errors=False, ignore_images=False, ignore_css=False,
                  ignore_js=False):
     """
-    Takes an HTML file or URL and outputs new HTML with resources as data URIs.
+    Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
     Arguments:
     pageurl - URL or path of web page to convert.
@@ -104,10 +110,10 @@ def convert_page(page_path, parser, callback=lambda *_:None,
 
     Returns: String containing the new webpage HTML.
     """
-
     # Get page HTML, whether from a server, a local file, or stdin
-    if page_path == None:
-        page_text = sys.stdin.read()
+    if page_path is None:
+        # BeautifulSoup also accepts bytes
+        page_text = sys.stdin.buffer.read()
     else:
         page_text, _ = get_resource(page_path)
 
@@ -147,10 +153,10 @@ def convert_page(page_path, parser, callback=lambda *_:None,
     for tag in tags:
         tag_url = tag['href'] if tag.name == 'link' else tag['src']
         try:
-            #BUG: doesn't work if using relative remote URLs in a local file
+            # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
             tag_data, tag_mime = get_resource(fullpath)
-            #TODO: Handle read errors
+            # TODO: Handle read errors
         except requests.exceptions.RequestException:
             if ignore_errors:
                 callback('ERROR', tag.name, "Can't access URL " + fullpath)
@@ -160,7 +166,7 @@ def convert_page(page_path, parser, callback=lambda *_:None,
             if ignore_errors:
                 callback('ERROR', tag.name, "Can't read file " + fullpath)
             else:
-                #TODO: Create and raise an HTMLArkError
+                # TODO: Create and raise an HTMLArkError
                 raise
         except ValueError as e:
             # Raised when a problem with the URL is found
@@ -172,7 +178,7 @@ def convert_page(page_path, parser, callback=lambda *_:None,
             else:
                 # htmlark can only get from http/https and local files
                 callback('ERROR', tag.name, "Unknown protocol in URL: " + tag_url)
-                #TODO: Only continue if ignoring errors
+                # TODO: Only continue if ignoring errors
                 continue
         else:
             encoded_resource = make_data_uri(tag_mime, tag_data)
@@ -186,8 +192,7 @@ def convert_page(page_path, parser, callback=lambda *_:None,
 
 
 def main():
-    """Script's main function, used when called as a command-line program"""
-
+    """Main function when called as a script."""
     options = get_options()
 
     # All messages use print_verbose() or print_error()
@@ -197,13 +202,13 @@ def main():
     else:
         print_verbose = lambda _: None
 
-    if options.webpage == None:
+    if options.webpage is None:
         print_verbose("Reading from STDIN")
     else:
         print_verbose("Processing {}".format(options.webpage))
 
     def info_callback(severity, message_type, message_data):
-        """Displays progress information during conversion"""
+        """Display progress information during conversion."""
         if message_type == 'img':
             tagtype = "Image"
         elif message_type == 'link':
@@ -222,7 +227,6 @@ def main():
             print_error("Unknown message level {}, please tell the author of the program".format(severity))
             print_error("{}: {}".format(tagtype, message_data))
 
-
     newhtml = convert_page(options.webpage, options.parser,
                            ignore_errors=options.ignore_errors,
                            ignore_images=options.ignore_images,
@@ -234,7 +238,7 @@ def main():
         options.output.write(newhtml)
     except OSError as e:
         print_error("Unable to write to output file: errno {}, {}".format(
-                        e.errno, e.strerror))
+                    e.errno, e.strerror))
         sys.exit(1)
 
     print_verbose("All done, output written to " + options.output.name)
