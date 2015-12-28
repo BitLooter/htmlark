@@ -58,15 +58,18 @@ def get_resource(resource_url: str):
     return data, mimetype
 
 
-def convert_page(page_path, parser, callback=lambda *_: None,
+def convert_page(page_path, parser='auto', callback=lambda *_: None,
                  ignore_errors=False, ignore_images=False, ignore_css=False,
                  ignore_js=False):
     """Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
     Parameters:
         pageurl (str): URL or path of web page to convert.
-        parser (str): Parser for Beautiful Soup 4 to use. See BS4's docs.
     Keyword Arguments:
+        parser (str): HTML Parser for Beautiful Soup 4 to use. See `BS4's docs.
+            <http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser>`
+            Default: 'auto' - Not an actual parser, but tells the library to
+            automatically choose a parser.
         ignore_errors (bool): If ``True`` do not abort on unreadable resources.
             Default: ``False``
         ignore_images (bool): If ``True`` do not process ``<img>`` tags.
