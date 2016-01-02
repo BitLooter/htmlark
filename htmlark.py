@@ -10,6 +10,7 @@ from urllib.parse import urljoin, urlparse
 import bs4
 import requests
 
+VERSION = "0.9.dev1"
 PARSERS = ['lxml', 'html5lib', 'html.parser']
 
 
@@ -66,8 +67,8 @@ def convert_page(page_path, parser='auto', callback=lambda *_: None,
     Parameters:
         pageurl (str): URL or path of web page to convert.
     Keyword Arguments:
-        parser (str): HTML Parser for Beautiful Soup 4 to use. See `BS4's docs.
-            <http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser>`
+        parser (str): HTML Parser for Beautiful Soup 4 to use. See
+            `BS4's docs. <http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser>`_
             Default: 'auto' - Not an actual parser, but tells the library to
             automatically choose a parser.
         ignore_errors (bool): If ``True`` do not abort on unreadable resources.
@@ -197,6 +198,8 @@ def get_options():
                                 documentation for more information.""")
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="Prints information during conversion")
+    parser.add_argument('--version', action='store_true', default=False,
+                        help="Displays version information")
     return parser.parse_args()
 
 
@@ -210,6 +213,10 @@ def main():
         print_verbose = lambda m: print(m, file=sys.stderr)
     else:
         print_verbose = lambda _: None
+
+    if options.version:
+        print("HTMLArk v{}".format(VERSION))
+        sys.exit(0)
 
     if options.webpage is None:
         print_verbose("Reading from STDIN")
