@@ -33,9 +33,9 @@ You can also get this information with ``htmlark --help``.
 
 Details::
 
-    usage: htmlark.py [-h] [-o OUTPUT] [-E] [-I] [-C] [-J]
-                      [-p {html.parser,lxml,html5lib,auto}] [-v] [--version]
-                      [webpage]
+    usage: htmlark [-h] [-o OUTPUT] [-E] [-I] [-C] [-J]
+                   [-p {html.parser,lxml,html5lib,auto}] [-v] [--version]
+                   [webpage]
 
     Converts a webpage including external resources into a single HTML file. Note
     that resources loaded with JavaScript will not be handled by this program, it
