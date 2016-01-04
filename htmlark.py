@@ -89,7 +89,7 @@ def convert_page(page_path, parser='auto', callback=lambda *_: None,
     """
     # Get page HTML, whether from a server, a local file, or stdin
     if page_path is None:
-        # BeautifulSoup also accepts bytes
+        # Encoding is unknown, read as bytes (let bs4 handle decoding)
         page_text = sys.stdin.buffer.read()
     else:
         page_text, _ = get_resource(page_path)
@@ -133,17 +133,13 @@ def convert_page(page_path, parser='auto', callback=lambda *_: None,
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
             tag_data, tag_mime = get_resource(fullpath)
-            # TODO: Handle read errors
         except requests.exceptions.RequestException:
-            if ignore_errors:
-                callback('ERROR', tag.name, "Can't access URL " + fullpath)
-            else:
+            callback('ERROR', tag.name, "Can't access URL " + fullpath)
+            if not ignore_errors:
                 raise
-        except FileNotFoundError as e:
-            if ignore_errors:
-                callback('ERROR', tag.name, "Can't read file " + fullpath)
-            else:
-                # TODO: Create and raise an HTMLArkError
+        except OSError as e:
+            callback('ERROR', tag.name, "Error reading '{}': {}".format(e.filename, e.strerror))
+            if not ignore_errors:
                 raise
         except ValueError as e:
             # Raised when a problem with the URL is found
@@ -151,12 +147,11 @@ def convert_page(page_path, parser='auto', callback=lambda *_: None,
             # Don't need to process things that are already data URIs
             if scheme == 'data':
                 callback('INFO', tag.name, "Already data URI")
-                continue
             else:
                 # htmlark can only get from http/https and local files
                 callback('ERROR', tag.name, "Unknown protocol in URL: " + tag_url)
-                # TODO: Only continue if ignoring errors
-                continue
+                if not ignore_errors:
+                    raise
         else:
             encoded_resource = make_data_uri(tag_mime, tag_data)
             if tag.name == 'link':
@@ -192,13 +187,13 @@ def get_options():
                         help="Ignores external JavaScript during conversion")
     parser.add_argument('-p', '--parser', default='auto',
                         choices=['html.parser', 'lxml', 'html5lib', 'auto'],
-                        help="""Select HTML parser. If not specifed, htmlark
+                        help="""Select HTML parser. Defaults to auto, which
                                 tries to use lxml, html5lib, and html.parser
-                                in that order (the 'auto' option). See
-                                documentation for more information.""")
+                                in that order. See documentation for more
+                                information.""")
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="Prints information during conversion")
-    parser.add_argument('--version', action='store_true', default=False,
+    parser.add_argument('-V', '--version', action='store_true', default=False,
                         help="Displays version information")
     return parser.parse_args()
 
@@ -207,21 +202,17 @@ def main():
     """Main function when called as a script."""
     options = get_options()
 
-    # All messages use print_verbose() or print_error()
-    print_error = lambda m: print(m, file=sys.stderr)
-    if options.verbose:
-        print_verbose = lambda m: print(m, file=sys.stderr)
-    else:
-        print_verbose = lambda _: None
-
+    # --version switch
     if options.version:
         print("HTMLArk v{}".format(VERSION))
         sys.exit(0)
 
-    if options.webpage is None:
-        print_verbose("Reading from STDIN")
+    # All further messages use print_verbose() or print_error()
+    print_error = lambda m: print(m, file=sys.stderr)
+    if options.verbose:
+        print_verbose = print_error
     else:
-        print_verbose("Processing {}".format(options.webpage))
+        print_verbose = lambda _: None
 
     def info_callback(severity, message_type, message_data):
         """Display progress information during conversion."""
@@ -243,21 +234,37 @@ def main():
             print_error("Unknown message level {}, please tell the author of the program".format(severity))
             print_error("{}: {}".format(tagtype, message_data))
 
-    newhtml = convert_page(options.webpage, options.parser,
-                           ignore_errors=options.ignore_errors,
-                           ignore_images=options.ignore_images,
-                           ignore_css=options.ignore_css,
-                           ignore_js=options.ignore_js,
-                           callback=info_callback)
+    # Convert page
+    if options.webpage is None:
+        print_verbose("Reading from STDIN")
+    else:
+        print_verbose("Processing {}".format(options.webpage))
 
+    try:
+        newhtml = convert_page(options.webpage,
+                               parser=options.parser,
+                               ignore_errors=options.ignore_errors,
+                               ignore_images=options.ignore_images,
+                               ignore_css=options.ignore_css,
+                               ignore_js=options.ignore_js,
+                               callback=info_callback)
+    except (OSError, requests.exceptions.RequestException, ValueError) as e:
+        print_error("Unable to convert webpage: {}".format(e))
+        sys.exit(1)
+
+    # Write output
     try:
         options.output.write(newhtml)
     except OSError as e:
-        print_error("Unable to write to output file: errno {}, {}".format(
-                    e.errno, e.strerror))
+        # Note that argparse handles errors opening the file handle
+        print_error("Unable to write to output file: {}".format(e.strerror))
         sys.exit(1)
 
     print_verbose("All done, output written to " + options.output.name)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nCancelling webpage conversion", file=sys.stderr)
+        sys.exit(1)
