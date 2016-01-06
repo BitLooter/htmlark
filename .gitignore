@@ -56,5 +56,5 @@ docs/_build/
 # PyBuilder
 target/
 
-# Virtualenv name
-.venv
+# Pyenv name
+.python-version
