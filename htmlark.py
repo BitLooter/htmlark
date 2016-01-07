@@ -29,7 +29,7 @@ def get_available_parsers():
     return available
 
 
-def get_resource(resource_url: str) -> (str, bytes):
+def _get_resource(resource_url: str) -> (str, bytes):
     """Download or reads a file (online or local).
 
     Parameters:
@@ -141,7 +141,7 @@ def convert_page(page_path: str, parser: str='auto',
         # Encoding is unknown, read as bytes (let bs4 handle decoding)
         page_text = sys.stdin.buffer.read()
     else:
-        _, page_text = get_resource(page_path)
+        _, page_text = _get_resource(page_path)
 
     # Not all parsers are equal - it can be specified on the command line
     # so the user can try another when one fails
@@ -172,7 +172,7 @@ def convert_page(page_path: str, parser: str='auto',
         try:
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
-            tag_mime, tag_data = get_resource(fullpath)
+            tag_mime, tag_data = _get_resource(fullpath)
         except requests.exceptions.RequestException:
             callback('ERROR', tag.name, "Can't access URL " + fullpath)
             if not ignore_errors:
@@ -203,7 +203,7 @@ def convert_page(page_path: str, parser: str='auto',
     return str(soup)
 
 
-def get_options():
+def _get_options():
     """Parse command line options."""
     parser = argparse.ArgumentParser(description="""
         Converts a webpage including external resources into a single HTML
@@ -248,14 +248,9 @@ def get_options():
     return parsed
 
 
-def display_parsers():
-    """Print a list of the parsers bs4 can use."""
-    pass
-
-
-def main():
+def _main():
     """Main function when called as a script."""
-    options = get_options()
+    options = _get_options()
 
     # All further messages should use print_verbose() or print_error()
     print_error = lambda m: print(m, file=sys.stderr)
@@ -311,13 +306,13 @@ def main():
     print_verbose("All done, output written to " + options.output.name)
 
 
-def main_wrapper():
+def _main_wrapper():
     """Used as an entry point for pip's automatic script creation."""
     try:
-        main()
+        _main()
     except KeyboardInterrupt:
         sys.exit("\nCancelling webpage conversion")
 
 
 if __name__ == "__main__":
-    main_wrapper()
+    _main_wrapper()
