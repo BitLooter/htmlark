@@ -6,14 +6,14 @@ import base64
 import mimetypes
 import sys
 from typing import Callable
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, quote
 
 import bs4
 # import requests
 try:
     from requests import RequestException, get as requests_get
 except ImportError:
-    requests = None
+    requests_get = None
 
     class RequestException(Exception):  # NOQA   make flake8 shut up
         """Dummy exception for when Requests is not installed."""
@@ -50,7 +50,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
     url_parsed = urlparse(resource_url)
     if url_parsed.scheme in ['http', 'https']:
         # Requests might not be installed
-        if requests is not None:
+        if requests_get is not None:
             request = requests_get(resource_url)
             data = request.content
             if 'Content-Type' in request.headers:
@@ -82,8 +82,12 @@ def make_data_uri(mimetype: str, data: bytes) -> str:
         str: Input data encoded into a data URI.
     """
     mimetype = '' if mimetype is None else mimetype
-    encoded_data = base64.b64encode(data).decode()
-    return "data:{};base64,{}".format(mimetype, encoded_data)
+    if mimetype in ['text/css', 'application/javascript']:
+        encoded_data = quote(data.decode())
+    else:
+        mimetype = mimetype + ';base64'
+        encoded_data = base64.b64encode(data).decode()
+    return "data:{},{}".format(mimetype, encoded_data)
 
 
 def convert_page(page_path: str, parser: str='auto',
@@ -152,7 +156,7 @@ def convert_page(page_path: str, parser: str='auto',
         <Converted page HTML, CSS links untouched, CSS errors printed to screen>
     """
     # Check features
-    if requests is None:
+    if requests_get is None:
         callback('INFO', 'feature', "Requests not available, web downloading disabled")
 
     # Get page HTML, whether from a server, a local file, or stdin
@@ -320,6 +324,7 @@ def _main():
     except (OSError, RequestException, ValueError) as e:
         sys.exit("Unable to convert webpage: {}".format(e))
     except NameError:
+        raise
         sys.exit("Cannot download web resource: Need Requests installed")
 
     # Write output
