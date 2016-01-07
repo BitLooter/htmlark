@@ -43,7 +43,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'htmlark = htmlark:main',
+            'htmlark = htmlark:main_wrapper',
         ]
     }
 )
