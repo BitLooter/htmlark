@@ -30,6 +30,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Archiving',
@@ -37,9 +38,10 @@ setup(
     ],
     keywords="development html webpage css javascript",
     py_modules=['htmlark'],
-    install_requires=['beautifulsoup4', 'requests'],
+    install_requires=['beautifulsoup4'],
     extras_require={
-        'parsers': ["lxml", "html5lib"],
+        'parsers': ['lxml', 'html5lib'],
+        'http': ['requests'],
     },
     entry_points={
         'console_scripts': [

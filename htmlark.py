@@ -9,7 +9,15 @@ from typing import Callable
 from urllib.parse import urljoin, urlparse
 
 import bs4
-import requests
+# import requests
+try:
+    from requests import RequestException, get as requests_get
+except ImportError:
+    requests = None
+
+    class RequestException(Exception):  # NOQA   make flake8 shut up
+        """Dummy exception for when Requests is not installed."""
+        pass
 
 VERSION = "0.9.dev2"
 PARSERS = ['lxml', 'html5lib', 'html.parser']
@@ -41,12 +49,16 @@ def _get_resource(resource_url: str) -> (str, bytes):
     """
     url_parsed = urlparse(resource_url)
     if url_parsed.scheme in ['http', 'https']:
-        request = requests.get(resource_url)
-        data = request.content
-        if 'Content-Type' in request.headers:
-            mimetype = request.headers['Content-Type']
+        # Requests might not be installed
+        if requests is not None:
+            request = requests_get(resource_url)
+            data = request.content
+            if 'Content-Type' in request.headers:
+                mimetype = request.headers['Content-Type']
+            else:
+                mimetype = mimetypes.guess_type(resource_url)
         else:
-            mimetype = mimetypes.guess_type(resource_url)
+            raise NameError("External URL found but requests not available")
     elif url_parsed.scheme == '':
         # '' is local file
         data = open(resource_url, 'rb').read()
@@ -106,6 +118,9 @@ def convert_page(page_path: str, parser: str='auto',
         OSError: Error reading a file
         ValueError: Problem with a path/URL
         requests.exceptions.RequestException: Problem getting remote resource
+        NameError: HTMLArk requires Requests to be installed to get resources
+            from the web. This error is raised when an external URL is
+            encountered.
     Examples:
         A very basic conversion of a local HTML file, using default settings:
 
@@ -136,6 +151,10 @@ def convert_page(page_path: str, parser: str='auto',
         >>> convert_page("badcss.html", ignore_errors=True, callback=mycallback)
         <Converted page HTML, CSS links untouched, CSS errors printed to screen>
     """
+    # Check features
+    if requests is None:
+        callback('INFO', 'feature', "Requests not available, web downloading disabled")
+
     # Get page HTML, whether from a server, a local file, or stdin
     if page_path is None:
         # Encoding is unknown, read as bytes (let bs4 handle decoding)
@@ -173,7 +192,7 @@ def convert_page(page_path: str, parser: str='auto',
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
             tag_mime, tag_data = _get_resource(fullpath)
-        except requests.exceptions.RequestException:
+        except RequestException:
             callback('ERROR', tag.name, "Can't access URL " + fullpath)
             if not ignore_errors:
                 raise
@@ -192,6 +211,11 @@ def convert_page(page_path: str, parser: str='auto',
                 callback('ERROR', tag.name, "Unknown protocol in URL: " + tag_url)
                 if not ignore_errors:
                     raise
+        except NameError as e:
+            # Requests module is not available
+            callback('ERROR', tag.name, str(e))
+            if not ignore_errors:
+                raise
         else:
             encoded_resource = make_data_uri(tag_mime, tag_data)
             if tag.name == 'link':
@@ -293,8 +317,10 @@ def _main():
                                ignore_css=options.ignore_css,
                                ignore_js=options.ignore_js,
                                callback=info_callback)
-    except (OSError, requests.exceptions.RequestException, ValueError) as e:
+    except (OSError, RequestException, ValueError) as e:
         sys.exit("Unable to convert webpage: {}".format(e))
+    except NameError:
+        sys.exit("Cannot download web resource: Need Requests installed")
 
     # Write output
     try:
