@@ -7,12 +7,15 @@ from datetime import datetime
 import mimetypes
 import sys
 from typing import Callable
-from urllib.parse import urljoin, urlparse, quote
+from urllib.parse import quote
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 import bs4
 # import requests
 try:
-    from requests import RequestException, get as requests_get
+    from requests import get as requests_get
+    from requests import RequestException
 except ImportError:
     requests_get = None
 
@@ -77,7 +80,8 @@ def make_data_uri(mimetype: str, data: bytes) -> str:
 
     Parameters:
         mimetype (str): String containing the MIME type of data (e.g.
-            image/jpeg). If ``None``, will be treated as an empty string.
+            image/jpeg). If ``None``, will be treated as an empty string,
+            equivalent in data URIs to ``text/plain``.
         data (bytes): Raw data to be encoded.
     Returns:
         str: Input data encoded into a data URI.
