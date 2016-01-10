@@ -3,14 +3,15 @@
     <head>
         <title>HTMLArk test page</title>
         <meta charset="utf-8">
-        <link rel='stylesheet' href='cssdoesnotexist'>
-        <script src='scriptdoesnotexist'></script>
+        <link rel='stylesheet' href='style.css'>
+        <script src='script.js'></script>
     </head>
     <body>
-        <img src='imagedoesnotexist'>
+        <img src='sunset.jpg'>
         <p>Sunrise near Hausdülmen, Dülmen, North Rhine-Westphalia, Germany</p>
         <p>© Dietmar Rabich, <a href='rabich.de'>rabich.de</a>, <a href='http://creativecommons.org/licenses/by-sa/4.0/legalcode'>CC BY-SA 4.0</a>, Wikimedia Commons</p>
-        <p>Image and text centered means CSS works.</p>
+        <p class='shown' style='display:none'>CSS was properly embedded.</p>
+        <p class='hidden'>CSS did not apply.</p>
         <p class='autofill'>JavaScript did not execute.</p> <!-- Replaced by the linked script -->
     </body>
 </html>

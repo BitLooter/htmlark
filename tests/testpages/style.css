@@ -6,3 +6,11 @@ img {
 p {
     text-align: center;
 }
+
+.hidden {
+    display: none;
+}
+
+.shown {
+    display: block !important;
+}
