@@ -65,7 +65,8 @@ def _get_resource(resource_url: str) -> (str, bytes):
             raise NameError("External URL found but requests not available")
     elif url_parsed.scheme == '':
         # '' is local file
-        data = open(resource_url, 'rb').read()
+        with open(resource_url, 'rb') as f:
+            data = f.read()
         mimetype, _ = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == 'data':
         raise ValueError("Resource path is a data URI", url_parsed.scheme)
