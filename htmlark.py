@@ -83,7 +83,7 @@ def make_data_uri(mimetype: str, data: bytes) -> str:
         str: Input data encoded into a data URI.
     """
     mimetype = '' if mimetype is None else mimetype
-    if mimetype in ['text/css', 'application/javascript']:
+    if mimetype in ['', 'text/css', 'application/javascript']:
         encoded_data = quote(data.decode())
     else:
         mimetype = mimetype + ';base64'
