@@ -49,6 +49,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
     Returns:
         str, bytes: Tuple containing the resource's MIME type and its data.
     Raises:
+        NameError: If an HTTP request was made and ``requests`` is not available.
         ValueError: If ``resource_url``'s protocol is invalid.
     """
     url_parsed = urlparse(resource_url)
@@ -62,7 +63,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
             else:
                 mimetype = mimetypes.guess_type(resource_url)
         else:
-            raise NameError("External URL found but requests not available")
+            raise NameError("HTTP URL found but requests not available")
     elif url_parsed.scheme == '':
         # '' is local file
         with open(resource_url, 'rb') as f:
