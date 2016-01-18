@@ -7,7 +7,7 @@ from setuptools import setup
 # Extract version number from source code
 with open('htmlark.py', 'r') as f:
     source_code = f.read()
-    version_regex = re.compile(r'''^\s*VERSION\s*=\s*['"](\d.*)['"]''', re.MULTILINE)
+    version_regex = re.compile(r'''^\s*__version__\s*=\s*['"](\d.*)['"]''', re.MULTILINE)
     project_version = version_regex.search(source_code).group(1)
 
 with open('README.rst', 'r') as f:

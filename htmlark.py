@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Embed images, CSS, and JavaScript into an HTML file, using data URIs."""
+__version__ = "0.9.dev2"
 
 import argparse
 import base64
@@ -12,7 +13,7 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import bs4
-# import requests
+# Import requests if available, dummy it if not
 try:
     from requests import get as requests_get
     from requests import RequestException
@@ -23,7 +24,6 @@ except ImportError:
         """Dummy exception for when Requests is not installed."""
         pass
 
-VERSION = "0.9.dev2"
 PARSERS = ['lxml', 'html5lib', 'html.parser']
 
 
@@ -276,7 +276,7 @@ def _get_options():
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
                         help="Prints information during conversion")
     parser.add_argument('-V', '--version', action='version',
-                        version="HTMLArk v{}".format(VERSION),
+                        version="HTMLArk v{}".format(__version__),
                         help="Displays version information")
     parsed = parser.parse_args()
 
@@ -293,11 +293,14 @@ def _main():
     options = _get_options()
 
     # All further messages should use print_verbose() or print_error()
-    print_error = lambda m: print(m, file=sys.stderr)
+    def print_error(m):
+        print(m, file=sys.stderr)
+    # print_error = lambda m: print(m, file=sys.stderr)
     if options.verbose:
         print_verbose = print_error
     else:
-        print_verbose = lambda _: None
+        def print_verbose(_):
+            pass
 
     def info_callback(severity, message_type, message_data):
         """Display progress information during conversion."""
