@@ -8,7 +8,7 @@ HTMLArk
 .. image:: https://img.shields.io/pypi/l/HTMLArk.svg
         :target: https://github.com/BitLooter/htmlark
 
-Embed images, CSS, and JavaScript into an HTML file. Through the magic of `data URIs <https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs>`_, ``htmlark`` can save these external dependencies inline right in the HTML. No more keeping around those "reallycoolwebpage_files" directories alongside the HTML files, everything is self-contained.
+Embed images, CSS, and JavaScript into an HTML file. Through the magic of `data URIs <https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs>`_, HTMLArk can save these external dependencies inline right in the HTML. No more keeping around those "reallycoolwebpage_files" directories alongside the HTML files, everything is self-contained.
 
 Note that this will only work with static pages. If an image or other resource is loaded with JavaScript, HTMLArk won't even know it exists.
 
@@ -22,7 +22,7 @@ Install HTMLArk with ``pip`` like so:
 
     pip install htmlark
 
-To use the `lxml <http://lxml.de/>`_ (recommended) or `html5lib <https://github.com/html5lib/html5lib-python>`_ parsers, you will need to install the lxml and/or html5lib Python libraries as well. HTMLArk can also get resources from the web, to enable this functionality you need `Requests <http://python-requests.org/`_ installed. You can install HTMLArk with all optional dependencies with this command:
+To use the `lxml <http://lxml.de/>`_ (recommended) or `html5lib <https://github.com/html5lib/html5lib-python>`_ parsers, you will need to install the lxml and/or html5lib Python libraries as well. HTMLArk can also get resources from the web, to enable this functionality you need `Requests <http://python-requests.org/>`_ installed. You can install HTMLArk with all optional dependencies with this command:
 
 .. code-block:: bash
 
@@ -36,7 +36,7 @@ Command-line usage
 ------------------
 You can also get this information with ``htmlark --help``.
 
-Details::
+::
 
     usage: htmlark [-h] [-o OUTPUT] [-E] [-I] [-C] [-J]
                    [-p {html.parser,lxml,html5lib,auto}] [-v] [--version]
@@ -105,6 +105,12 @@ Details::
         Returns:
             str: The new webpage HTML.
 
+
+Compatibility
+-------------
+Data URIs have been supported by every major browser for many years now. The only browser that might cause problems is Internet Explorer (surprise!). IE7 and below have no support for data URIs, but IE8 and above support them for CSS and images. As far as I know no version of IE allows you to load JavaScript from a data URI, though it is supported in Edge.
+
+See `Can I Use's page on data URIs <http://caniuse.com/#feat=datauri>`_ for more compatibility information.
 
 License
 -------
