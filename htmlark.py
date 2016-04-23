@@ -78,7 +78,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
 
 
 def make_data_uri(mimetype: str, data: bytes) -> str:
-    """Convert data into a base64-encoded data URI.
+    """Convert data into an encoded data URI.
 
     Parameters:
         mimetype (str): String containing the MIME type of data (e.g.
@@ -90,6 +90,7 @@ def make_data_uri(mimetype: str, data: bytes) -> str:
     """
     mimetype = '' if mimetype is None else mimetype
     if mimetype in ['', 'text/css', 'application/javascript']:
+        # Text data can simply be URL-encoded
         encoded_data = quote(data.decode())
     else:
         mimetype = mimetype + ';base64'
