@@ -78,9 +78,12 @@ You can also integrate HTMLArk into your own scripts, by importing it and callin
 
 Details::
 
-    def convert_page(page_path, parser='auto', callback=lambda *_: None,
-                     ignore_errors=False, ignore_images=False, ignore_css=False,
-                     ignore_js=False):
+    def convert_page(page_path: str, parser: str='auto',
+                     callback: Callable[[str, str, str], None]=lambda *_: None,
+                     ignore_errors: bool=False, ignore_images: bool=False,
+                     ignore_css: bool=False, ignore_js: bool=False) -> str
+
+        Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
         Parameters:
             pageurl (str): URL or path of web page to convert.
@@ -90,6 +93,7 @@ Details::
                 Default: 'auto' - Not an actual parser, but tells the library to
                 automatically choose a parser.
             ignore_errors (bool): If ``True`` do not abort on unreadable resources.
+                Unprocessable tags (e.g. broken links) will simply be skipped.
                 Default: ``False``
             ignore_images (bool): If ``True`` do not process ``<img>`` tags.
                 Default: ``False``
@@ -98,12 +102,47 @@ Details::
             ignore_js (bool): If ``True`` do not process ``<script>`` tags.
                 Default: ``False``
             callback (function): Called before a new resource is processed. Takes
-                three parameters: severity level ('INFO' or 'ERROR'), a string with
+                three parameters: message type ('INFO' or 'ERROR'), a string with
                 the category of the callback (usually the tag related to the
                 message), and the message data (usually a string to be printed).
-
         Returns:
             str: The new webpage HTML.
+        Raises:
+            OSError: Error reading a file
+            ValueError: Problem with a path/URL
+            requests.exceptions.RequestException: Problem getting remote resource
+            NameError: HTMLArk requires Requests to be installed to get resources
+                from the web. This error is raised when an external URL is
+                encountered.
+        Examples:
+            A very basic conversion of a local HTML file, using default settings:
+
+            >>> convert_page("webpage.html")
+            <Converted page HTML>
+
+            However, that example will fail if there are any problems accessing
+            linked resources in the HTML (e.g. a missing image). If you cannot
+            verify the validity of links ahead of time (converting a downloaded
+            web page, for example) you can disable failing on error:
+
+            >>> convert_page("brokenpage.html", ignore_errors=True)
+            <Converted page HTML, tags with broken links untouched>
+
+            You can also skip processing of content types:
+
+            >>> convert_page("webpage.html", ignore_images=True)
+            <Converted page HTML, with <img> tags untouched>
+
+            If you want to get feedback on the progress of the conversion, you can
+            define a callback function. For example, a callback that prints all
+            CSS-related errors to stdout (note that ignore_errors will bypass
+            broken links but still report them to the callback):
+
+            >>> def mycallback(message_type, message_category, message):
+            ...     if message_type == 'ERROR' and message_category == 'link':
+            ...         print(message)
+            >>> convert_page("badcss.html", ignore_errors=True, callback=mycallback)
+            <Converted page HTML, CSS links untouched, CSS errors printed to screen>
 
 
 Compatibility

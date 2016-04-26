@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Embed images, CSS, and JavaScript into an HTML file, using data URIs."""
-__version__ = "0.9.dev2"
+__version__ = "0.9.dev3"
 
 import argparse
 import base64
