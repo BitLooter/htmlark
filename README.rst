@@ -4,9 +4,9 @@ HTMLArk
 .. image:: https://img.shields.io/github/downloads/BitLooter/htmlark/total.svg
         :target: https://github.com/BitLooter/htmlark
 .. image:: https://img.shields.io/pypi/v/HTMLArk.svg
-        :target: https://github.com/BitLooter/htmlark
+        :target: https://pypi.python.org/pypi/HTMLArk
 .. image:: https://img.shields.io/pypi/l/HTMLArk.svg
-        :target: https://github.com/BitLooter/htmlark
+        :target: https://raw.githubusercontent.com/BitLooter/htmlark/master/LICENSE.txt
 
 Embed images, CSS, and JavaScript into an HTML file. Through the magic of `data URIs <https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs>`_, HTMLArk can save these external dependencies inline right in the HTML. No more keeping around those "reallycoolwebpage_files" directories alongside the HTML files, everything is self-contained.
 
