@@ -14,6 +14,8 @@ Note that this will only work with static pages. If an image or other resource i
 
 Installation and Requirements
 -----------------------------
+If you are on Windows and don't have or want Python installed, you can grab a standalone binary from the `releases <https://github.com/BitLooter/htmlark/releases>`_ page. Otherwise, follow the instructions below.
+
 Python 3.5 or greater is required for HTMLArk.
 
 Install HTMLArk with ``pip`` like so:
