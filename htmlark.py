@@ -101,7 +101,8 @@ def make_data_uri(mimetype: str, data: bytes) -> str:
 def convert_page(page_path: str, parser: str='auto',
                  callback: Callable[[str, str, str], None]=lambda *_: None,
                  ignore_errors: bool=False, ignore_images: bool=False,
-                 ignore_css: bool=False, ignore_js: bool=False) -> str:
+                 ignore_css: bool=False, ignore_js: bool=False,
+                 ignore_source: bool=False) -> str:
     """Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
     Parameters:
@@ -119,6 +120,8 @@ def convert_page(page_path: str, parser: str='auto',
         ignore_css (bool): If ``True`` do not process ``<link>`` (stylesheet) tags.
             Default: ``False``
         ignore_js (bool): If ``True`` do not process ``<script>`` tags.
+            Default: ``False``
+        ignore_source (bool): If ``True`` do not process ``<source>`` tags.
             Default: ``False``
         callback (function): Called before a new resource is processed. Takes
             three parameters: message type ('INFO' or 'ERROR'), a string with
@@ -196,6 +199,11 @@ def convert_page(page_path: str, parser: str='auto',
         for script in scripttags:
             if 'src' in script.attrs:
                 tags.append(script)
+    if not ignore_source:
+        sourcetags = soup('source')
+        for source in sourcetags:
+            if 'src' in source.attrs:
+                tags.append(source)
 
     # Convert the linked resources
     for tag in tags:
