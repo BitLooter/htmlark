@@ -11,6 +11,8 @@ from typing import Callable
 from urllib.parse import quote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
+from urllib.request import pathname2url
+from urllib.request import url2pathname
 
 import bs4
 # Import requests if available, dummy it if not
@@ -41,6 +43,10 @@ def get_available_parsers():
     return available
 
 
+def path2uri(path):
+    return urljoin('file:', pathname2url(path))
+
+
 def _get_resource(resource_url: str) -> (str, bytes):
     """Download or reads a file (online or local).
 
@@ -64,11 +70,18 @@ def _get_resource(resource_url: str) -> (str, bytes):
                 mimetype = mimetypes.guess_type(resource_url)
         else:
             raise NameError("HTTP URL found but requests not available")
-    elif url_parsed.scheme == '':
-        # '' is local file
-        with open(resource_url, 'rb') as f:
+    elif url_parsed.scheme in ['', 'file']:
+        if url_parsed.scheme == 'file':
+            # Yank the scheme instead of using url_parsed.path because
+            # Windows drive letters interfere with parsing.
+            path = url2pathname(resource_url[len(url_parsed.scheme)+1:])
+        else:
+            # '' is local file.
+            path = resource_url
+
+        with open(path, 'rb') as f:
             data = f.read()
-        mimetype, _ = mimetypes.guess_type(resource_url)
+        mimetype, _ = mimetypes.guess_type(path)
     elif url_parsed.scheme == 'data':
         raise ValueError("Resource path is a data URI", url_parsed.scheme)
     else:
