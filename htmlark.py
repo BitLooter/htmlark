@@ -71,7 +71,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
         with open(resource_url, 'rb') as f:
             data = b'\xef\xbb\xbf'
             data += f.read()
-            
+
         mimetype, _ = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == 'data':
         raise ValueError("Resource path is a data URI", url_parsed.scheme)
