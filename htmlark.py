@@ -13,12 +13,14 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import bs4
+
 # Import requests if available, dummy it if not
 try:
     from requests import get as requests_get
     from requests import RequestException
 except ImportError:
     requests_get = None
+
 
     class RequestException(Exception):  # NOQA   make flake8 shut up
         """Dummy exception for when Requests is not installed."""
@@ -67,7 +69,9 @@ def _get_resource(resource_url: str) -> (str, bytes):
     elif url_parsed.scheme == '':
         # '' is local file
         with open(resource_url, 'rb') as f:
-            data = f.read()
+            data = b'\xef\xbb\xbf'
+            data += f.read()
+
         mimetype, _ = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == 'data':
         raise ValueError("Resource path is a data URI", url_parsed.scheme)
@@ -98,14 +102,14 @@ def make_data_uri(mimetype: str, data: bytes) -> str:
     return "data:{},{}".format(mimetype, encoded_data)
 
 
-def convert_page(page_path: str, parser: str='auto',
-                 callback: Callable[[str, str, str], None]=lambda *_: None,
-                 ignore_errors: bool=False, ignore_images: bool=False,
-                 ignore_css: bool=False, ignore_js: bool=False) -> str:
+def convert_page(page_path: str, parser: str = 'auto',
+                 callback: Callable[[str, str, str], None] = lambda *_: None,
+                 ignore_errors: bool = False, ignore_images: bool = False,
+                 ignore_css: bool = False, ignore_js: bool = False) -> str:
     """Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
     Parameters:
-        pageurl (str): URL or path of web page to convert.
+        page_path (str): URL or path of web page to convert.
     Keyword Arguments:
         parser (str): HTML Parser for Beautiful Soup 4 to use. See
             `BS4's docs. <http://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser>`_
@@ -296,6 +300,7 @@ def _main():
     # All further messages should use print_verbose() or print_error()
     def print_error(m):
         print(m, file=sys.stderr)
+
     # print_error = lambda m: print(m, file=sys.stderr)
     if options.verbose:
         print_verbose = print_error
