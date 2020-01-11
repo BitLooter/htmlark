@@ -13,6 +13,8 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import bs4
+from bs4 import Tag
+
 # Import requests if available, dummy it if not
 try:
     from requests import get as requests_get
@@ -186,7 +188,7 @@ def convert_page(page_path: str, parser: str='auto',
     # Gather all the relevant tags together
     if not ignore_images:
         tags += soup('img')
-        tags += soup('image')
+        tags += soup('svg')
     if not ignore_css:
         csstags = soup('link')
         for css in csstags:
@@ -201,6 +203,10 @@ def convert_page(page_path: str, parser: str='auto',
     # Convert the linked resources
     for tag in tags:
         tag_url = tag['href'] if tag.name == 'link' else tag['src']
+        if tag.name.lower() == 'svg':
+            for element in tag.contents:
+                if type(element) is Tag:
+                    tag = soup.new_tag('img', src=element['src'])
         try:
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
