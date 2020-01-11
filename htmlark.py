@@ -202,16 +202,26 @@ def convert_page(page_path: str, parser: str='auto',
 
     # Convert the linked resources
     for tag in tags:
-        tag_url = tag['href'] if tag.name == 'link' else tag['src']
+        tag_url = ''
+
         if tag.name.lower() == 'svg':
             for element in tag.contents:
-                if type(element) is Tag:
-                    tag = soup.new_tag('img', src=element['src'])
-                    break
+                if type(element) is Tag and element.name.lower() == 'image':
+                    image_tag = soup.new_tag('img', src=element['src'])
+                    tag.replace_with(image_tag)
+                    tag = image_tag
+
+                    tag_url = tag['href'] if tag.name == 'link' else tag['src']
+                else:
+                    continue
+        else:
+            tag_url = tag['href'] if tag.name == 'link' else tag['src']
+
         try:
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
             tag_mime, tag_data = _get_resource(fullpath)
+
         except RequestException:
             callback('ERROR', tag.name, "Can't access URL " + fullpath)
             if not ignore_errors:

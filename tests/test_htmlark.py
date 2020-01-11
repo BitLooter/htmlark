@@ -5,6 +5,7 @@ import os.path
 import unittest
 import bs4
 import htmlark
+from bs4 import Tag
 
 # Check for existance of requests
 requests_spec = importlib.util.find_spec('requests')
@@ -59,10 +60,12 @@ class TestHTMLArk(unittest.TestCase):  # NOQA
 
         soup = bs4.BeautifulSoup(packed_html, parser)
 
-        image_elements = soup('image')
+        image_elements = soup('svg')
 
         for image_element in image_elements:
-            self.assertTrue("data:image" in image_element['src'])
+            for element in image_element.contents:
+                if type(element) is Tag:
+                    self.assertTrue(element.name.lower() != 'image')
 
 
 if __name__ == "__main__":
