@@ -186,6 +186,7 @@ def convert_page(page_path: str, parser: str='auto',
     # Gather all the relevant tags together
     if not ignore_images:
         tags += soup('img')
+        tags += soup('image')
     if not ignore_css:
         csstags = soup('link')
         for css in csstags:

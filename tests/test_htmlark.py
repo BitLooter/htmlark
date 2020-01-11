@@ -3,7 +3,7 @@
 import importlib
 import os.path
 import unittest
-
+import bs4
 import htmlark
 
 # Check for existance of requests
@@ -51,3 +51,21 @@ class TestHTMLArk(unittest.TestCase):  # NOQA
         htmlark.requests_get = None
         with self.assertRaises(NameError):
             htmlark._get_resource("http://example.com/not/a/real/path.png")
+
+    def test_get_image_element_and_create_dataa_uri(self):
+        packed_html = htmlark.convert_page('https://www.bbc.co.uk/news/world-africa-51063149', ignore_errors=True)
+
+        parser = htmlark.get_available_parsers()[0]
+
+        soup = bs4.BeautifulSoup(packed_html, parser)
+
+        image_elements = soup('image')
+
+        for image_element in image_elements:
+            self.assertTrue("data:image" in image_element['src'])
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
