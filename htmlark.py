@@ -19,12 +19,18 @@ from bs4 import Tag
 try:
     from requests import get as requests_get
     from requests import RequestException
+
+
 except ImportError:
     requests_get = None
 
     class RequestException(Exception):  # NOQA   make flake8 shut up
         """Dummy exception for when Requests is not installed."""
         pass
+
+headers = {
+    'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"
+}
 
 PARSERS = ['lxml', 'html5lib', 'html.parser']
 
@@ -58,7 +64,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
     if url_parsed.scheme in ['http', 'https']:
         # Requests might not be installed
         if requests_get is not None:
-            request = requests_get(resource_url)
+            request = requests_get(resource_url, headers=headers)
             data = request.content
             if 'Content-Type' in request.headers:
                 mimetype = request.headers['Content-Type']
