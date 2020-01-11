@@ -207,6 +207,7 @@ def convert_page(page_path: str, parser: str='auto',
             for element in tag.contents:
                 if type(element) is Tag:
                     tag = soup.new_tag('img', src=element['src'])
+                    break
         try:
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
