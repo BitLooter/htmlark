@@ -13,16 +13,24 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 
 import bs4
+from bs4 import Tag
+
 # Import requests if available, dummy it if not
 try:
     from requests import get as requests_get
     from requests import RequestException
+
+
 except ImportError:
     requests_get = None
 
     class RequestException(Exception):  # NOQA   make flake8 shut up
         """Dummy exception for when Requests is not installed."""
         pass
+
+headers = {
+    'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"
+}
 
 PARSERS = ['lxml', 'html5lib', 'html.parser']
 
@@ -56,7 +64,7 @@ def _get_resource(resource_url: str) -> (str, bytes):
     if url_parsed.scheme in ['http', 'https']:
         # Requests might not be installed
         if requests_get is not None:
-            request = requests_get(resource_url)
+            request = requests_get(resource_url, headers=headers)
             data = request.content
             if 'Content-Type' in request.headers:
                 mimetype = request.headers['Content-Type']
@@ -186,6 +194,7 @@ def convert_page(page_path: str, parser: str='auto',
     # Gather all the relevant tags together
     if not ignore_images:
         tags += soup('img')
+        tags += soup('svg')
     if not ignore_css:
         csstags = soup('link')
         for css in csstags:
@@ -199,11 +208,26 @@ def convert_page(page_path: str, parser: str='auto',
 
     # Convert the linked resources
     for tag in tags:
-        tag_url = tag['href'] if tag.name == 'link' else tag['src']
+        tag_url = ''
+
+        if tag.name.lower() == 'svg':
+            for element in tag.contents:
+                if type(element) is Tag and element.name.lower() == 'image':
+                    image_tag = soup.new_tag('img', src=element['src'])
+                    tag.replace_with(image_tag)
+                    tag = image_tag
+
+                    tag_url = tag['href'] if tag.name == 'link' else tag['src']
+                else:
+                    continue
+        else:
+            tag_url = tag['href'] if tag.name == 'link' else tag['src']
+
         try:
             # BUG: doesn't work if using relative remote URLs in a local file
             fullpath = urljoin(page_path, tag_url)
             tag_mime, tag_data = _get_resource(fullpath)
+
         except RequestException:
             callback('ERROR', tag.name, "Can't access URL " + fullpath)
             if not ignore_errors:
