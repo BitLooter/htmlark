@@ -113,6 +113,7 @@ def convert_page(
     ignore_images: bool = False,
     ignore_css: bool = False,
     ignore_js: bool = False,
+    charset: str = "utf-8",
 ) -> str:
     """Take an HTML file or URL and outputs new HTML with resources as data URIs.
 
@@ -190,7 +191,7 @@ def convert_page(
     # so the user can try another when one fails
     if parser == "auto":
         parser = get_available_parsers()[0]
-    soup = bs4.BeautifulSoup(page_text.decode("utf-8"), parser)
+    soup = bs4.BeautifulSoup(page_text.decode(charset), parser)
     callback("INFO", "parser", "Using parser " + parser)
 
     tags = []
