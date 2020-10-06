@@ -8,7 +8,7 @@ from datetime import datetime
 import mimetypes
 import sys
 from typing import Callable
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
@@ -66,7 +66,9 @@ def _get_resource(resource_url: str) -> (str, bytes):
             raise NameError("HTTP URL found but requests not available")
     elif url_parsed.scheme == '':
         # '' is local file
-        with open(resource_url, 'rb') as f:
+        # unescape characters since the local filesystem won't translate them
+        local_path = unquote(resource_url)
+        with open(local_path, 'rb') as f:
             data = f.read()
         mimetype, _ = mimetypes.guess_type(resource_url)
     elif url_parsed.scheme == 'data':
