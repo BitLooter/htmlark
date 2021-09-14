@@ -1,8 +1,8 @@
 HTMLArk
 =======
 
-.. image:: https://img.shields.io/github/downloads/BitLooter/htmlark/total.svg
-        :target: https://github.com/BitLooter/htmlark
+.. image:: https://pepy.tech/badge/htmlark
+        :target: https://pepy.tech/project/htmlark
 .. image:: https://img.shields.io/pypi/v/HTMLArk.svg
         :target: https://pypi.python.org/pypi/HTMLArk
 .. image:: https://img.shields.io/pypi/l/HTMLArk.svg
